@@ -1,0 +1,11 @@
+1. Activate venv
+
+cd "D:\Projects\OCR Extractor"
+ocr_env\Scripts\activate
+
+
+
+
+2. Run application
+
+python barcode_scanner.py
