@@ -1,26 +1,20 @@
 {
-    "builds": [
+  "version": 2,
+  "builds": [
       {
-        "src": "live.py",
-        "use": "@vercel/python"
+          "src": "live.py",
+          "use": "@vercel/python"
       }
-    ],
-    "routes": [
+  ],
+  "routes": [
       {
-        "src": "/api/(.*)",
-        "dest": "live.py"
+          "src": "/api/(.*)",
+          "dest": "live.py"
       },
       {
-        "src": "/(.*)",
-        "dest": "/index.html"
+          "src": "/(.*)",
+          "dest": "/index.html"
       }
-    ],
-    "functions": {
-      "api/*": {
-        "runtime": "python3.9",
-        "maxDuration": 10
-      }
-    },
-    "ignoreCommand": "echo 'Ignoring build step to prevent size issues'"
-  }
-  
+  ],
+  "ignoreCommand": "echo 'Ignoring build step to prevent size issues'"
+}
