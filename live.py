@@ -19,12 +19,12 @@ def extract_metadata(image):
         return "Unknown", "Unknown"
 
 def process_images(uploaded_files):
-    """Process images from memory to extract barcode data and metadata."""
+    """Process images directly from memory without saving to disk."""
     data_list = []
     
     for file in uploaded_files:
         try:
-            image = Image.open(io.BytesIO(file.read()))
+            image = Image.open(file)
             barcode_data = pytesseract.image_to_string(image.convert("L")).strip()
             author, taken_time = extract_metadata(image)
             data_list.append({
@@ -37,8 +37,11 @@ def process_images(uploaded_files):
             print(f"Error processing {file.filename}: {e}")
 
     df = pd.DataFrame(data_list)
+    
+    # Generate Excel file in memory
     output = io.BytesIO()
-    df.to_excel(output, index=False, engine="openpyxl")
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False)
     output.seek(0)
 
     return df, output
@@ -64,16 +67,21 @@ def index():
 
     return render_template("index.html")
 
-@app.route("/api/download")
+@app.route("/api/download", methods=["POST"])
 def download():
-    """Allow downloading the generated Excel report."""
+    """Allow downloading the generated Excel report without saving it."""
     try:
+        uploaded_files = request.files.getlist("images")
+        if not uploaded_files:
+            return jsonify({"error": "No files uploaded."})
+
+        _, report_file = process_images(uploaded_files)
         today_date = datetime.today().strftime('%Y-%m-%d')
-        df, report_file = process_images([])  # Empty list just to generate a new file
+
         return send_file(report_file, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                          as_attachment=True, download_name=f"scanned_report_{today_date}.xlsx")
     except Exception as e:
         return f"Error generating file: {e}", 500
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=True)
