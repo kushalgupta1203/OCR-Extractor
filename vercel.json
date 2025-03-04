@@ -9,12 +9,5 @@
             "src": "/(.*)",
             "dest": "/templates/index.html"
         }
-    ],
-    "builds": [
-        {
-            "src": "live.py",
-            "use": "@vercel/python"
-        }
     ]
   }
-  
