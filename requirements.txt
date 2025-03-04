@@ -1,7 +1,6 @@
-opencv-python==4.8.0.76
+flask
 pandas==2.1.4
 pytesseract==0.3.10
+opencv-python
 Pillow==10.1.0
 openpyxl==3.1.2
-streamlit==1.30.0
-flask
