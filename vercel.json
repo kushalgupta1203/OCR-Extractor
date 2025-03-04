@@ -1,13 +1,20 @@
 {
-  "version": 2,
-  "routes": [
-      {
-          "src": "/api/(.*)",
-          "dest": "live.py"
-      },
-      {
-          "src": "/(.*)",
-          "dest": "/templates/index.html"
-      }
-  ]
-}
+    "version": 2,
+    "routes": [
+        {
+            "src": "/api/(.*)",
+            "dest": "live.py"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/templates/index.html"
+        }
+    ],
+    "builds": [
+        {
+            "src": "live.py",
+            "use": "@vercel/python"
+        }
+    ]
+  }
+  

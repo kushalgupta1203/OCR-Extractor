@@ -1,11 +1,12 @@
 import io
-from flask import Flask, render_template, request, send_file, jsonify
 import pytesseract
 import pandas as pd
 from datetime import datetime
+from fastapi import FastAPI, File, UploadFile, Form
+from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from PIL import Image, ExifTags
 
-app = Flask(__name__)
+app = FastAPI()
 
 def extract_metadata(image):
     """Extract metadata like author and taken time from an image."""
@@ -18,13 +19,13 @@ def extract_metadata(image):
     except Exception:
         return "Unknown", "Unknown"
 
-def process_images(uploaded_files):
+async def process_images(files):
     """Process images directly from memory without saving to disk."""
     data_list = []
     
-    for file in uploaded_files:
+    for file in files:
         try:
-            image = Image.open(file)
+            image = Image.open(io.BytesIO(await file.read()))
             barcode_data = pytesseract.image_to_string(image.convert("L")).strip()
             author, taken_time = extract_metadata(image)
             data_list.append({
@@ -46,42 +47,48 @@ def process_images(uploaded_files):
 
     return df, output
 
-@app.route("/", methods=["GET", "POST"])
-def index():
-    if request.method == "POST":
-        uploaded_files = request.files.getlist("images")
-        if not uploaded_files or all(file.filename == "" for file in uploaded_files):
-            return jsonify({"error": "No files uploaded."})
+@app.post("/api/upload")
+async def upload(files: list[UploadFile] = File(...)):
+    if not files:
+        return JSONResponse({"error": "No files uploaded."})
 
-        try:
-            df, report_file = process_images(uploaded_files)
-            if df.empty:
-                return jsonify({"error": "No valid images found in the uploaded files."})
+    try:
+        df, report_file = await process_images(files)
+        if df.empty:
+            return JSONResponse({"error": "No valid images found in the uploaded files."})
 
-            return jsonify({
-                "success": "Images processed successfully.",
-                "tables": [df.to_html(classes='table table-bordered', index=False)]
-            })
-        except Exception as e:
-            return jsonify({"error": f"An error occurred: {e}"})
+        return JSONResponse({
+            "success": "Images processed successfully.",
+            "tables": [df.to_html(classes='table table-bordered', index=False)]
+        })
+    except Exception as e:
+        return JSONResponse({"error": f"An error occurred: {e}"})
 
-    return render_template("index.html")
-
-@app.route("/api/download", methods=["POST"])
-def download():
+@app.post("/api/download")
+async def download(files: list[UploadFile] = File(...)):
     """Allow downloading the generated Excel report without saving it."""
     try:
-        uploaded_files = request.files.getlist("images")
-        if not uploaded_files:
-            return jsonify({"error": "No files uploaded."})
+        if not files:
+            return JSONResponse({"error": "No files uploaded."})
 
-        _, report_file = process_images(uploaded_files)
+        _, report_file = await process_images(files)
         today_date = datetime.today().strftime('%Y-%m-%d')
 
-        return send_file(report_file, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                         as_attachment=True, download_name=f"scanned_report_{today_date}.xlsx")
+        return StreamingResponse(
+            io.BytesIO(report_file.getvalue()),
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="scanned_report_{today_date}.xlsx"'}
+        )
     except Exception as e:
-        return f"Error generating file: {e}", 500
+        return JSONResponse({"error": f"Error generating file: {e}"})
 
-if __name__ == "__main__":
-    app.run(debug=True)
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    return """
+    <h2>Upload Images for Processing</h2>
+    <form action="/api/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="files" multiple>
+        <button type="submit">Upload</button>
+    </form>
+    """
+
