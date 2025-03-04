@@ -15,6 +15,5 @@
           "src": "/(.*)",
           "dest": "/index.html"
       }
-  ],
-  "ignoreCommand": "echo 'Ignoring build step to prevent size issues'"
+  ]
 }
