@@ -3,10 +3,6 @@
       {
         "src": "live.py",
         "use": "@vercel/python"
-      },
-      {
-        "src": "index.html",
-        "use": "@vercel/static"
       }
     ],
     "routes": [
@@ -18,6 +14,13 @@
         "src": "/(.*)",
         "dest": "/index.html"
       }
-    ]
+    ],
+    "functions": {
+      "api/*": {
+        "runtime": "python3.9",
+        "maxDuration": 10
+      }
+    },
+    "ignoreCommand": "echo 'Ignoring build step to prevent size issues'"
   }
   

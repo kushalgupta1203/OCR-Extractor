@@ -1,6 +1,5 @@
 flask
 pandas==2.1.4
 pytesseract==0.3.10
-opencv-python
 Pillow==10.1.0
 openpyxl==3.1.2
