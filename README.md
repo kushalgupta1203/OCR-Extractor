@@ -1,4 +1,4 @@
-[ocr-extractor-live.vercel.app](https://ocr-extractor-live.vercel.app)
+Link - [ocr-extractor-live.vercel.app](https://ocr-extractor-live.vercel.app)
 
 # OCR Extractor
 
