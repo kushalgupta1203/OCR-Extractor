@@ -2,6 +2,10 @@
 cd "D:\Projects\OCR Extractor"
 ocr_env\Scripts\activate
 
+# Install Libraries
+pip install -r requirements.txt
+
+
 # Run the OCR script manually
 python backend.py
 
