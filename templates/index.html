@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Extractor</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { background-color: white; }
+        .header, .footer { background: linear-gradient(90deg, #007BFF, #004080); color: white; padding: 15px; text-align: center; }
+        .btn-primary { background-color: #007BFF; border: none; padding: 12px; font-size: 16px; }
+        .tab-content { margin-top: 10px; }
+        #processing { display: none; font-size: 18px; color: red; text-align: center; }
+        .container { min-height: 80vh; padding-top: 10px; }
+        .footer { position: relative; bottom: 0; width: 100%; padding: 10px; }
+        .pm-announcement { background: #fff3cd; padding: 10px; text-align: center; border: 1px solid #ffeeba; margin-top: 10px; }
+        .upload-container {
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 18px;
+            background-color: #f8f9fa;
+        }
+        .upload-icon {
+            font-size: 50px;
+            color: #007BFF;
+        }
+        .form-control, .btn { border-radius: 10px; }
+        .upload-button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>OCR Extractor</h1>
+    </div>
+
+    <div class="container mt-2">
+        <ul class="nav nav-tabs" id="tabs">
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#steps">Steps</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#upload">Upload Images</a></li>
+            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#results">Results</a></li>
+        </ul>
+
+        <div class="tab-content">
+            <div id="steps" class="tab-pane fade show active">
+                <h3>How to Use</h3>
+                <ul>
+                    <li>Select one or more image files.</li>
+                    <li>Process images to extract barcode and metadata.</li>
+                    <li>View results in the table.</li>
+                    <li>Download the report.</li>
+                </ul>
+            </div>
+
+            <div id="upload" class="tab-pane fade">
+                <h3 class="text-center">Upload Images</h3>
+                <form id="uploadForm" method="post" enctype="multipart/form-data" class="text-center">
+                    <input type="file" name="images" multiple required hidden id="file-input">
+                    <button type="button" id="uploadButton" class="upload-button">Select Files</button>
+                    <p id="fileList"></p>
+                    <button type="submit" class="btn btn-primary mt-3" style="display: none;" id="processButton">Upload & Process</button>
+                </form>
+                <p id="processing">Processing... <span id="timer">0 seconds</span></p>
+            </div>
+
+            <div id="results" class="tab-pane fade">
+                <h3 class="text-center">Results</h3>
+                <div id="results-table">
+                    <!-- Table will be inserted here -->
+                </div>
+                <button id="download-button" class="btn btn-success mt-3" style="display: none;">Download Report</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="pm-announcement">
+        <p><strong>PM Surya Ghar: Muft Bijli Yojana</strong><br>
+        "Aims to provide 300 units of free electricity to 1 crore households."</p>
+    </div>
+
+    <footer class="footer mt-2">OCR Extractor &copy; 2025</footer>
+
+    <script>
+        $(document).ready(function() {
+            $("#uploadButton").on("click", function() {
+                $("#file-input").click();
+            });
+
+            $("#file-input").on("change", function() {
+                let files = this.files;
+                if (files.length > 0) {
+                    $("#fileList").text(files.length + " file(s) selected");
+                    $("#processButton").show();
+                } else {
+                    $("#fileList").text("");
+                    $("#processButton").hide();
+                }
+            });
+
+            $("#uploadForm").on("submit", function(event) {
+                event.preventDefault();
+                let formData = new FormData(this);
+                $("#processing").show();
+                let startTime = new Date().getTime();
+                let timerInterval = setInterval(function() {
+                    let currentTime = new Date().getTime();
+                    let elapsedTime = Math.floor((currentTime - startTime) / 1000);
+                    let estimatedTime = Math.floor(elapsedTime * 1.5); // Simple estimation, adjust as needed
+                    $("#timer").text(`Elapsed: ${elapsedTime} seconds, Estimated: ${estimatedTime} seconds`);
+                }, 1000);
+
+                $.ajax({
+                    url: "/",
+                    type: "POST",
+                    data: formData,
+                    contentType: false,
+                    processData: false,
+                    success: function(response) {
+                        clearInterval(timerInterval);
+                        $("#processing").hide();
+                        if (response.success) {
+                            $("#results-table").html(response.tables[0]);
+                            $("#download-button").attr("href", "/download");
+                            $("#download-button").show();
+                            $('a[href="#results"]').tab('show');
+                        } else {
+                            alert(response.error || "An error occurred.");
+                        }
+                    },
+                    error: function() {
+                        clearInterval(timerInterval);
+                        $("#processing").hide();
+                        alert("Error in uploading files.");
+                    }
+                });
+            });
+            $("#download-button").on("click", function() {
+                window.location.href = $(this).attr("href");
+            });
+        });
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -3,7 +3,7 @@ cd "D:\Projects\OCR Extractor"
 ocr_env\Scripts\activate
 
 # Run the OCR script manually
-python barcode_scanner.py
+python backend.py
 
-# Run the Streamlit app
-streamlit run app.py
+# Run the live flask application
+python live.py
