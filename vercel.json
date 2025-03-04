@@ -1,0 +1,23 @@
+{
+    "builds": [
+      {
+        "src": "live.py",
+        "use": "@vercel/python"
+      },
+      {
+        "src": "index.html",
+        "use": "@vercel/static"
+      }
+    ],
+    "routes": [
+      {
+        "src": "/api/(.*)",
+        "dest": "live.py"
+      },
+      {
+        "src": "/(.*)",
+        "dest": "/index.html"
+      }
+    ]
+  }
+  
