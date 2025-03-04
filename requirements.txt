@@ -1,7 +1,5 @@
-fastapi
-uvicorn
+Flask
 pytesseract
-pillow
 pandas
 openpyxl
-python-multipart
+Pillow

@@ -1,17 +1,24 @@
-import io
+from flask import Flask, render_template, request, send_file, jsonify
+import os
 import pytesseract
 import pandas as pd
 from datetime import datetime
-from fastapi import FastAPI, File, UploadFile, Form
-from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from PIL import Image, ExifTags
 
-app = FastAPI()
+app = Flask(__name__)
 
-def extract_metadata(image):
-    """Extract metadata like author and taken time from an image."""
+# Set path for Tesseract OCR
+pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
+
+# Define universal upload path
+UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+def extract_metadata(image_path):
+    """Extract metadata like author and taken time from image."""
     try:
-        exif_data = image._getexif()
+        img = Image.open(image_path)
+        exif_data = img._getexif()
         if not exif_data:
             return "Unknown", "Unknown"
         metadata = {ExifTags.TAGS.get(tag_id, tag_id): value for tag_id, value in exif_data.items()}
@@ -19,76 +26,67 @@ def extract_metadata(image):
     except Exception:
         return "Unknown", "Unknown"
 
-async def process_images(files):
-    """Process images directly from memory without saving to disk."""
+def process_images(image_folder):
+    """Process images to extract barcode data and metadata."""
     data_list = []
-    
-    for file in files:
+    for filename in sorted(os.listdir(image_folder)):
+        if filename.lower().endswith((".png", ".jpg", ".jpeg")):
+            image_path = os.path.join(image_folder, filename)
+            try:
+                barcode_data = pytesseract.image_to_string(Image.open(image_path).convert("L")).strip()
+                author, taken_time = extract_metadata(image_path)
+                data_list.append({
+                    "Image": filename,
+                    "Barcode": barcode_data if barcode_data else "Not Detected",
+                    "Author": author,
+                    "Taken Time": taken_time
+                })
+            except Exception:
+                continue
+    df = pd.DataFrame(data_list)
+    today_date = datetime.today().strftime('%Y-%m-%d')
+    output_excel = os.path.join(UPLOAD_FOLDER, f"scanned_report_{today_date}.xlsx")
+    df.to_excel(output_excel, index=False, engine="openpyxl")
+    return df, output_excel
+
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        uploaded_files = request.files.getlist("images")
+        if not uploaded_files or all(file.filename == "" for file in uploaded_files):
+            return jsonify({"error": "No files uploaded."})
+
+        # Clear old files
+        for file in os.listdir(UPLOAD_FOLDER):
+            os.remove(os.path.join(UPLOAD_FOLDER, file))
+
+        # Save new images
+        for file in uploaded_files:
+            if file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+                file.save(os.path.join(UPLOAD_FOLDER, file.filename))
+            else:
+                return jsonify({"error": "Only PNG, JPG, JPEG files are allowed."})
+
         try:
-            image = Image.open(io.BytesIO(await file.read()))
-            barcode_data = pytesseract.image_to_string(image.convert("L")).strip()
-            author, taken_time = extract_metadata(image)
-            data_list.append({
-                "Image": file.filename,
-                "Barcode": barcode_data if barcode_data else "Not Detected",
-                "Author": author,
-                "Taken Time": taken_time
+            df, report_path = process_images(UPLOAD_FOLDER)
+            if df.empty:
+                return jsonify({"error": "No valid images found in the uploaded files."})
+            return jsonify({
+                "success": "Images processed successfully.",
+                "tables": [df.to_html(classes='table table-bordered', index=False)]
             })
         except Exception as e:
-            print(f"Error processing {file.filename}: {e}")
+            return jsonify({"error": f"An error occurred: {e}"})
 
-    df = pd.DataFrame(data_list)
-    
-    # Generate Excel file in memory
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False)
-    output.seek(0)
+    return render_template("index.html")
 
-    return df, output
+@app.route("/download")
+def download():
+    today_date = datetime.today().strftime('%Y-%m-%d')
+    report_path = os.path.join(UPLOAD_FOLDER, f"scanned_report_{today_date}.xlsx")
+    if not os.path.exists(report_path):
+        return "File not found.", 404
+    return send_file(report_path, as_attachment=True)
 
-@app.post("/api/upload")
-async def upload(files: list[UploadFile] = File(...)):
-    if not files:
-        return JSONResponse({"error": "No files uploaded."})
-
-    try:
-        df, report_file = await process_images(files)
-        if df.empty:
-            return JSONResponse({"error": "No valid images found in the uploaded files."})
-
-        return JSONResponse({
-            "success": "Images processed successfully.",
-            "tables": [df.to_html(classes='table table-bordered', index=False)]
-        })
-    except Exception as e:
-        return JSONResponse({"error": f"An error occurred: {e}"})
-
-@app.post("/api/download")
-async def download(files: list[UploadFile] = File(...)):
-    """Allow downloading the generated Excel report without saving it."""
-    try:
-        if not files:
-            return JSONResponse({"error": "No files uploaded."})
-
-        _, report_file = await process_images(files)
-        today_date = datetime.today().strftime('%Y-%m-%d')
-
-        return StreamingResponse(
-            io.BytesIO(report_file.getvalue()),
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            headers={"Content-Disposition": f'attachment; filename="scanned_report_{today_date}.xlsx"'}
-        )
-    except Exception as e:
-        return JSONResponse({"error": f"Error generating file: {e}"})
-
-@app.get("/", response_class=HTMLResponse)
-async def home():
-    return """
-    <h2>Upload Images for Processing</h2>
-    <form action="/api/upload" method="post" enctype="multipart/form-data">
-        <input type="file" name="files" multiple>
-        <button type="submit">Upload</button>
-    </form>
-    """
-
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=5000)
