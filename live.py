@@ -1,14 +1,11 @@
+import io
 from flask import Flask, render_template, request, send_file, jsonify
 import pytesseract
 import pandas as pd
 from datetime import datetime
 from PIL import Image, ExifTags
-import io
 
 app = Flask(__name__)
-
-# Set path for Tesseract OCR (Make sure Tesseract is installed)
-pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
 def extract_metadata(image):
     """Extract metadata like author and taken time from an image."""
@@ -27,7 +24,6 @@ def process_images(uploaded_files):
     
     for file in uploaded_files:
         try:
-            # Read image from memory
             image = Image.open(io.BytesIO(file.read()))
             barcode_data = pytesseract.image_to_string(image.convert("L")).strip()
             author, taken_time = extract_metadata(image)
@@ -40,13 +36,10 @@ def process_images(uploaded_files):
         except Exception as e:
             print(f"Error processing {file.filename}: {e}")
 
-    # Convert results to a DataFrame
     df = pd.DataFrame(data_list)
-    
-    # Generate Excel file in memory
     output = io.BytesIO()
     df.to_excel(output, index=False, engine="openpyxl")
-    output.seek(0)  # Move cursor to start for download
+    output.seek(0)
 
     return df, output
 
@@ -71,7 +64,7 @@ def index():
 
     return render_template("index.html")
 
-@app.route("/download")
+@app.route("/api/download")
 def download():
     """Allow downloading the generated Excel report."""
     try:
