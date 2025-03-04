@@ -1,3 +1,6 @@
 "ocr_venv/" 
 ocr_env/
+"images/"
 images/
+"uploads/"
+uploads/
