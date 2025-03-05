@@ -1,5 +1,3 @@
-Link - [ocr-extractor-eta.vercel.app](https://ocr-extractor-eta.vercel.app/)
-
 # OCR Extractor
 
 ## Overview
