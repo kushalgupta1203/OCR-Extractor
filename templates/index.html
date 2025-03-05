@@ -7,14 +7,62 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
-        body { background-color: white; }
-        .header, .footer { background: linear-gradient(90deg, #007BFF, #004080); color: white; padding: 15px; text-align: center; }
-        .btn-primary { background-color: #007BFF; border: none; padding: 12px; font-size: 16px; }
-        .tab-content { margin-top: 10px; }
-        #processing { display: none; font-size: 18px; color: red; text-align: center; }
-        .container { min-height: 80vh; padding-top: 10px; }
-        .footer { position: relative; bottom: 0; width: 100%; padding: 10px; }
-        .pm-announcement { background: #fff3cd; padding: 10px; text-align: center; border: 1px solid #ffeeba; margin-top: 10px; }
+        /* Ensure the page takes up full height */
+        html, body {
+            height: 100%;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header and footer styles */
+        .header, .footer {
+            background: linear-gradient(90deg, #007BFF, #004080);
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+
+        /* Ensure the main content grows and pushes footer down */
+        .container {
+            flex-grow: 1;
+            padding-top: 10px;
+        }
+
+        /* Footer stays at the bottom */
+        .footer {
+            width: 100%;
+            margin-top: auto;
+            padding: 10px;
+        }
+
+        /* Other styles */
+        .btn-primary {
+            background-color: #007BFF;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+        }
+
+        .tab-content {
+            margin-top: 10px;
+        }
+
+        #processing {
+            display: none;
+            font-size: 18px;
+            color: red;
+            text-align: center;
+        }
+
+        .pm-announcement {
+            background: #fff3cd;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ffeeba;
+            margin-top: 10px;
+        }
+
         .upload-container {
             padding: 20px;
             text-align: center;
@@ -22,11 +70,16 @@
             font-size: 18px;
             background-color: #f8f9fa;
         }
+
         .upload-icon {
             font-size: 50px;
             color: #007BFF;
         }
-        .form-control, .btn { border-radius: 10px; }
+
+        .form-control, .btn {
+            border-radius: 10px;
+        }
+
         .upload-button {
             background-color: #007BFF;
             color: white;
@@ -37,6 +90,7 @@
             cursor: pointer;
             transition: background-color 0.3s;
         }
+
         .upload-button:hover {
             background-color: #0056b3;
         }
@@ -118,7 +172,7 @@
                 let timerInterval = setInterval(function() {
                     let currentTime = new Date().getTime();
                     let elapsedTime = Math.floor((currentTime - startTime) / 1000);
-                    let estimatedTime = Math.floor(elapsedTime * 1.5); // Simple estimation, adjust as needed
+                    let estimatedTime = Math.floor(elapsedTime * 1.5);
                     $("#timer").text(`Elapsed: ${elapsedTime} seconds, Estimated: ${estimatedTime} seconds`);
                 }, 1000);
 
@@ -147,6 +201,7 @@
                     }
                 });
             });
+
             $("#download-button").on("click", function() {
                 window.location.href = $(this).attr("href");
             });
