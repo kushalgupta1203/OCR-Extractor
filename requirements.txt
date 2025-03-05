@@ -1,6 +1,6 @@
 Flask
-pytesseract
+easyocr
 pandas
-Pillow
+pillow
 python-barcode
 openpyxl
