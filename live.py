@@ -16,8 +16,6 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-app = Flask(__name__)
-
 # Cloudinary Configuration from .env
 cloudinary.config(
     cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
@@ -25,8 +23,29 @@ cloudinary.config(
     api_secret=os.getenv("CLOUDINARY_API_SECRET")
 )
 
+# Debugging: Print Cloudinary Config
+print("Cloudinary Configuration:")
+print("Cloud Name:", os.getenv("CLOUDINARY_CLOUD_NAME"))
+print("API Key:", os.getenv("CLOUDINARY_API_KEY"))
+print("API Secret:", os.getenv("CLOUDINARY_API_SECRET"))
+
 # Initialize EasyOCR reader
 reader = easyocr.Reader(['en'])
+
+def test_cloudinary_upload():
+    """Test Cloudinary upload with a sample image."""
+    try:
+        test_image_path = "test_image.jpg"  # Ensure this image exists in the working directory
+        if os.path.exists(test_image_path):
+            upload_result = cloudinary.uploader.upload(test_image_path)
+            print("Cloudinary Test Upload Successful! URL:", upload_result["secure_url"])
+        else:
+            print("Test image not found. Skipping Cloudinary test upload.")
+    except Exception as e:
+        print("Cloudinary Test Upload Failed:", str(e))
+
+# Run Cloudinary test upload
+test_cloudinary_upload()
 
 def generate_barcode(data):
     """Generate barcode image and return as BytesIO object."""
@@ -99,16 +118,25 @@ def process_images(image_urls):
 def index():
     if request.method == "POST":
         uploaded_files = request.files.getlist("images")
+        print("Received Files:", uploaded_files)  # Debugging
+        
         if not uploaded_files or all(file.filename == "" for file in uploaded_files):
             return jsonify({"error": "No files uploaded."})
 
         image_urls = []
         
         for file in uploaded_files:
+            print("Processing File:", file.filename)  # Debugging
+            
             if file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
-                upload_result = cloudinary.uploader.upload(file)
-                image_url = upload_result["secure_url"]
-                image_urls.append(image_url)
+                try:
+                    upload_result = cloudinary.uploader.upload(file)
+                    image_url = upload_result["secure_url"]
+                    image_urls.append(image_url)
+                    print("Uploaded to Cloudinary:", image_url)  # Debugging
+                except Exception as e:
+                    print("Cloudinary Upload Error:", str(e))
+                    return jsonify({"error": "Cloudinary upload failed.", "details": str(e)})
             else:
                 return jsonify({"error": "Only PNG, JPG, JPEG files are allowed."})
 
@@ -119,8 +147,8 @@ def index():
             return jsonify({
                 "success": "Images processed successfully.",
                 "tables": [df.to_html(classes='table table-bordered', index=False)],
-                "codes": df["Extracted Code"].tolist(),  # Show generated codes on result screen
-                "uploaded_images": image_urls  # Return Cloudinary URLs
+                "codes": df["Extracted Code"].tolist(),
+                "uploaded_images": image_urls
             })
         except Exception as e:
             return jsonify({"error": f"An error occurred: {e}"})
