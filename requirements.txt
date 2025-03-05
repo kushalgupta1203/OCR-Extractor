@@ -4,3 +4,5 @@ pandas
 pillow
 python-barcode
 openpyxl
+cloudinary
+python-dotenv
