@@ -4,3 +4,5 @@ ocr_env/
 images/
 "uploads/"
 uploads/
+"train/"
+train/

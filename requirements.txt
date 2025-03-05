@@ -1,5 +1,6 @@
 Flask
 pytesseract
 pandas
-openpyxl
 Pillow
+python-barcode
+openpyxl

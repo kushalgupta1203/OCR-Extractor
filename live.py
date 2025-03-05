@@ -4,14 +4,17 @@ import pytesseract
 import pandas as pd
 from datetime import datetime
 from PIL import Image, ExifTags
+import barcode
+from barcode.writer import ImageWriter
 
 app = Flask(__name__)
 
 # Set path for Tesseract OCR
 pytesseract.pytesseract.tesseract_cmd = r"C:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
-# Define universal upload path
-UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
+# Define upload path
+UPLOAD_FOLDER = "uploads"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 def extract_metadata(image_path):
@@ -26,26 +29,41 @@ def extract_metadata(image_path):
     except Exception:
         return "Unknown", "Unknown"
 
+def generate_barcode(text, output_path):
+    """Generate barcode image from extracted text."""
+    try:
+        code128 = barcode.get_barcode_class('code128')
+        barcode_instance = code128(text, writer=ImageWriter())
+        barcode_instance.save(output_path)
+        return output_path + ".png"
+    except Exception:
+        return ""
+
 def process_images(image_folder):
-    """Process images to extract barcode data and metadata."""
+    """Extract text, metadata, and generate barcode for extracted text."""
     data_list = []
     for filename in sorted(os.listdir(image_folder)):
         if filename.lower().endswith((".png", ".jpg", ".jpeg")):
             image_path = os.path.join(image_folder, filename)
             try:
-                barcode_data = pytesseract.image_to_string(Image.open(image_path).convert("L")).strip()
+                extracted_text = pytesseract.image_to_string(Image.open(image_path)).strip()
                 author, taken_time = extract_metadata(image_path)
+                barcode_path = ""
+                if extracted_text:
+                    barcode_path = generate_barcode(extracted_text, os.path.join(UPLOAD_FOLDER, filename.split('.')[0]))
                 data_list.append({
                     "Image": filename,
-                    "Barcode": barcode_data if barcode_data else "Not Detected",
+                    "Extracted Text": extracted_text if extracted_text else "No text detected",
+                    "Barcode Image": barcode_path,
                     "Author": author,
                     "Taken Time": taken_time
                 })
             except Exception:
                 continue
+    
     df = pd.DataFrame(data_list)
     today_date = datetime.today().strftime('%Y-%m-%d')
-    output_excel = os.path.join(UPLOAD_FOLDER, f"scanned_report_{today_date}.xlsx")
+    output_excel = os.path.join(UPLOAD_FOLDER, f"text_extraction_report_{today_date}.xlsx")
     df.to_excel(output_excel, index=False, engine="openpyxl")
     return df, output_excel
 
@@ -83,7 +101,7 @@ def index():
 @app.route("/download")
 def download():
     today_date = datetime.today().strftime('%Y-%m-%d')
-    report_path = os.path.join(UPLOAD_FOLDER, f"scanned_report_{today_date}.xlsx")
+    report_path = os.path.join(UPLOAD_FOLDER, f"text_extraction_report_{today_date}.xlsx")
     if not os.path.exists(report_path):
         return "File not found.", 404
     return send_file(report_path, as_attachment=True)
