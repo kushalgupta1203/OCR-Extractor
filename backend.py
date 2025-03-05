@@ -39,6 +39,8 @@ def extract_metadata(image_path):
     except Exception as e:
         return "Unknown", "Unknown"
 
+
+
 def process_images(folder_path, base_name):
     """Process images to extract barcodes and metadata, save to a versioned Excel file."""
     data_list = []
