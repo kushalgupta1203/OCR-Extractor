@@ -1,6 +1,0 @@
-Flask
-easyocr
-pandas
-pillow
-python-barcode
-openpyxl

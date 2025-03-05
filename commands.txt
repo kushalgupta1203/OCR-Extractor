@@ -5,9 +5,6 @@ ocr_env\Scripts\activate
 # Install Libraries
 pip install -r requirements.txt
 
-# Run the local host application
-python local.py
-
 # Run the OCR script manually
 python backend.py
 
