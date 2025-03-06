@@ -2,161 +2,122 @@ from flask import Flask, render_template, request, send_file, jsonify
 import os
 import easyocr
 import pandas as pd
-from datetime import datetime
 from io import BytesIO
-import barcode
-from barcode.writer import ImageWriter
-from openpyxl.drawing.image import Image as XLImage
-import re
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
 from dotenv import load_dotenv
+import re
 
-# Load environment variables (only in local development)
+app = Flask(__name__)
+
+# Load environment variables
 if os.getenv("VERCEL"):
     print("Running on Vercel, using environment variables.")
 else:
-    load_dotenv()
-
-# Initialize Flask app
-app = Flask(__name__)
-
-# Cloudinary Configuration Debugging
-print("Cloudinary Configuration:")
-print("Cloud Name:", os.getenv("CLOUDINARY_CLOUD_NAME"))
-print("API Key:", os.getenv("CLOUDINARY_API_KEY"))
-print("API Secret:", os.getenv("CLOUDINARY_API_SECRET"))
+    load_dotenv()  # Load .env for local development
 
 # Initialize EasyOCR reader
 reader = easyocr.Reader(['en'])
 
-def test_cloudinary_upload():
-    """Test Cloudinary upload with a sample image."""
-    try:
-        test_image_path = "test_image.jpg"  # Ensure this image exists in the working directory
-        if os.path.exists(test_image_path):
-            upload_result = cloudinary.uploader.upload(test_image_path)
-            print("Cloudinary Test Upload Successful! URL:", upload_result["secure_url"])
-        else:
-            print("Test image not found. Skipping Cloudinary test upload.")
-    except Exception as e:
-        print("Cloudinary Test Upload Failed:", str(e))
-
-# Run Cloudinary test upload
-test_cloudinary_upload()
-
-def generate_barcode(data):
-    """Generate barcode image and return as BytesIO object."""
-    try:
-        if not data or len(data) < 8:
-            return None  # Avoid generating barcode for invalid data
-        code128 = barcode.get_barcode_class('code128')
-        barcode_instance = code128(data, writer=ImageWriter())
-        barcode_img = BytesIO()
-        barcode_instance.write(barcode_img)
-        barcode_img.seek(0)
-        return barcode_img
-    except Exception:
-        return None
-
 def extract_text_under_barcode(image_url):
     """Extract only the alphanumeric text that appears directly under the barcode from Cloudinary image URL."""
     extracted_texts = reader.readtext(image_url, detail=1)
+    
     extracted_code = ""
     max_y = float('-inf')
     
     for bbox, text, _ in extracted_texts:
-        text = re.sub(r'[^a-zA-Z0-9]', '', text)  # Remove symbols, keep only alphanumeric
+        text = re.sub(r'[^a-zA-Z0-9]', '', text)  # Keep only alphanumeric
         (x_min, y_min, x_max, y_max) = bbox[0][1], bbox[2][1], bbox[0][0], bbox[2][0]
         
-        if y_min > max_y and 8 <= len(text) <= 30:  # Ensure text is below barcode and within length constraints
+        if y_min > max_y and 8 <= len(text) <= 30:
             max_y = y_min
             extracted_code = text
     
     return extracted_code
 
 def process_images(image_urls):
-    """Extract text under barcode and generate barcode image in Excel using Cloudinary URLs."""
+    """Extract barcode text and save to Excel."""
     data_list = []
+    excel_buffer = BytesIO()
+    df = pd.DataFrame(columns=["Image URL", "Extracted Code"])
     
     for image_url in image_urls:
         try:
             extracted_code = extract_text_under_barcode(image_url)
-            barcode_img_data = generate_barcode(extracted_code)
+            print(f"Processing {image_url} -> Extracted Code: {extracted_code}")  # Debugging
+
             data_list.append({
                 "Image URL": image_url,
-                "Extracted Code": extracted_code if extracted_code else "No code detected",
-                "Barcode Image": barcode_img_data
+                "Extracted Code": extracted_code if extracted_code else "No code detected"
             })
-        except Exception:
+
+            df = pd.concat([df, pd.DataFrame([[image_url, extracted_code]], columns=["Image URL", "Extracted Code"])], ignore_index=True)
+
+        except Exception as e:
+            print(f"Error processing image {image_url}: {e}")
             continue
+    
+    df.to_excel(excel_buffer, index=False)
+    excel_buffer.seek(0)
+    return data_list, excel_buffer
 
-    df = pd.DataFrame(data_list)
-    today_date = datetime.today().strftime('%Y-%m-%d')
-    output_excel = f"barcode_extraction_report_{today_date}.xlsx"
-
-    with pd.ExcelWriter(output_excel, engine="openpyxl") as writer:
-        df.drop(columns=["Barcode Image"], inplace=True)  # Remove image column for main sheet
-        df.to_excel(writer, index=False, sheet_name="Extracted Data")
-        workbook = writer.book
-        worksheet = writer.sheets["Extracted Data"]
-
-        for index, img_data in enumerate(data_list):
-            if img_data["Barcode Image"]:
-                img_io = img_data["Barcode Image"]
-                excel_img = XLImage(img_io)
-                excel_img.width = 100  # Adjusted barcode size
-                excel_img.height = 30
-                cell_position = f"C{index + 2}"  # Barcode image placed in a new column
-                worksheet.add_image(excel_img, cell_position)
-
-    return df, output_excel
+processed_excel_buffer = None  # Store latest processed file
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    global processed_excel_buffer
     if request.method == "POST":
         uploaded_files = request.files.getlist("images")
         
+        # Debugging: Check if files are received
         if not uploaded_files or all(file.filename == "" for file in uploaded_files):
-            return jsonify({"error": "No files uploaded."})
+            print("No files received or empty filenames.")
+            return jsonify({"error": "No valid files uploaded."})
 
         image_urls = []
-        
         for file in uploaded_files:
-            if file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+            if file and file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
                 try:
-                    upload_result = cloudinary.uploader.upload(file, format=file.filename.split('.')[-1])
-                    image_url = upload_result["secure_url"]
-                    image_urls.append(image_url)
-                    print("Uploaded to Cloudinary:", image_url)
+                    upload_result = cloudinary.uploader.upload(file)
+                    image_urls.append(upload_result["secure_url"])
                 except Exception as e:
+                    print(f"Cloudinary upload failed: {e}")
                     return jsonify({"error": "Cloudinary upload failed.", "details": str(e)})
             else:
+                print(f"Invalid file format: {file.filename}")
                 return jsonify({"error": "Only PNG, JPG, JPEG files are allowed."})
 
+        if not image_urls:
+            return jsonify({"error": "No valid images found in the uploaded files."})
+
         try:
-            df, report_path = process_images(image_urls)
-            if df.empty:
-                return jsonify({"error": "No valid images found in the uploaded files."})
+            data_list, excel_buffer = process_images(image_urls)
+            if not data_list:
+                return jsonify({"error": "No barcodes detected in the uploaded images."})
+
+            processed_excel_buffer = excel_buffer
+
             return jsonify({
                 "success": "Images processed successfully.",
-                "tables": [df.to_html(classes='table table-bordered', index=False)],
-                "codes": df["Extracted Code"].tolist(),
-                "uploaded_images": image_urls
+                "tables": pd.DataFrame(data_list).to_html(classes='table table-bordered', index=False),
+                "download_url": "/download"
             })
         except Exception as e:
+            print(f"Processing error: {e}")
             return jsonify({"error": f"An error occurred: {e}"})
-
+    
     return render_template("index.html")
 
 @app.route("/download")
 def download():
-    today_date = datetime.today().strftime('%Y-%m-%d')
-    report_path = f"barcode_extraction_report_{today_date}.xlsx"
-    if not os.path.exists(report_path):
-        return "File not found.", 404
-    return send_file(report_path, as_attachment=True)
+    """Download the generated Excel file."""
+    global processed_excel_buffer
+    if not processed_excel_buffer:
+        return jsonify({"error": "No processed data available for download."})
+
+    return send_file(processed_excel_buffer, download_name="barcode_extraction_report.xlsx", as_attachment=True)
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=5000)

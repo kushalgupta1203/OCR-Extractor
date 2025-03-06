@@ -8,3 +8,7 @@ uploads/
 train/
 .env
 ".env"
+# Ignore all Excel and CSV files
+*.xls
+*.xlsx
+*.csv
