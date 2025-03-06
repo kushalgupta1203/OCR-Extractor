@@ -16,7 +16,11 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 
 # Load environment variables
-load_dotenv()
+if os.getenv("VERCEL"):
+    print("Running on Vercel, using environment variables.")
+else:
+    load_dotenv()  # Load .env for local development
+
 
 # Debugging: Print Cloudinary Config
 print("Cloudinary Configuration:")
