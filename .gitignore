@@ -12,3 +12,4 @@ train/
 *.xls
 *.xlsx
 *.csv
+.vercel

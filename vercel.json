@@ -1,5 +1,11 @@
 {
     "version": 2,
+    "builds": [
+        {
+            "src": "live.py",
+            "use": "@vercel/python"
+        }
+    ],
     "routes": [
         {
             "src": "/api/(.*)",
@@ -7,7 +13,7 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/templates/index.html"
+            "dest": "live.py"
         }
     ]
-  }
+}
