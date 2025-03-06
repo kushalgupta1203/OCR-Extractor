@@ -13,23 +13,20 @@ import cloudinary.uploader
 import cloudinary.api
 from dotenv import load_dotenv
 
-app = Flask(__name__)
-
-# Load environment variables
+# Load environment variables (only in local development)
 if os.getenv("VERCEL"):
     print("Running on Vercel, using environment variables.")
 else:
-    load_dotenv()  # Load .env for local development
+    load_dotenv()
 
+# Initialize Flask app
+app = Flask(__name__)
 
-# Debugging: Print Cloudinary Config
+# Cloudinary Configuration Debugging
 print("Cloudinary Configuration:")
 print("Cloud Name:", os.getenv("CLOUDINARY_CLOUD_NAME"))
 print("API Key:", os.getenv("CLOUDINARY_API_KEY"))
 print("API Secret:", os.getenv("CLOUDINARY_API_SECRET"))
-
-# Initialize Flask app
-app = Flask(__name__)
 
 # Initialize EasyOCR reader
 reader = easyocr.Reader(['en'])
@@ -120,7 +117,6 @@ def process_images(image_urls):
 def index():
     if request.method == "POST":
         uploaded_files = request.files.getlist("images")
-        print("Received Files:", uploaded_files)  # Debugging
         
         if not uploaded_files or all(file.filename == "" for file in uploaded_files):
             return jsonify({"error": "No files uploaded."})
@@ -128,16 +124,13 @@ def index():
         image_urls = []
         
         for file in uploaded_files:
-            print("Processing File:", file.filename)  # Debugging
-            
             if file.filename.lower().endswith((".png", ".jpg", ".jpeg")):
                 try:
-                    upload_result = cloudinary.uploader.upload(file)
+                    upload_result = cloudinary.uploader.upload(file, format=file.filename.split('.')[-1])
                     image_url = upload_result["secure_url"]
                     image_urls.append(image_url)
-                    print("Uploaded to Cloudinary:", image_url)  # Debugging
+                    print("Uploaded to Cloudinary:", image_url)
                 except Exception as e:
-                    print("Cloudinary Upload Error:", str(e))
                     return jsonify({"error": "Cloudinary upload failed.", "details": str(e)})
             else:
                 return jsonify({"error": "Only PNG, JPG, JPEG files are allowed."})
