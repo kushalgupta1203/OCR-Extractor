@@ -6,3 +6,4 @@ python-barcode
 openpyxl
 cloudinary
 python-dotenv
+gunicorn
