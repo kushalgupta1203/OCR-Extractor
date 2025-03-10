@@ -12,9 +12,6 @@ from dotenv import load_dotenv
 import re
 import requests
 
-import pytesseract
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
-
 app = Flask(__name__)
 
 # Load environment variables
@@ -141,12 +138,4 @@ def download():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
     app.run(host="0.0.0.0", port=port)
-
-
-
-print("Checking Tesseract installation...")
-os.system("which tesseract")
-os.system("tesseract --version")
-
-
 
