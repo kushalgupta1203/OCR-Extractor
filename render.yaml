@@ -7,7 +7,7 @@ services:
     buildCommand: |
       pip install --upgrade pip
       pip install -r requirements.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT live:app
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 live:app
     envVars:
       - key: PORT
         value: 5000
