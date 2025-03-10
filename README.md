@@ -13,7 +13,8 @@ OCR Extractor is a web-based application that extracts barcode and metadata from
 - **Frontend:** HTML, CSS (Bootstrap), JavaScript (jQuery)
 - **Backend:** Python (Flask)
 - **OCR Processing:** OCR Space
-- **Cloud Storage:** Cloudinary, Render
+- **Cloud Storage:** Cloudinary
+- **Deployment:** Render
 - **Data Handling:** Pandas (for Excel generation)
 
 ## Link
