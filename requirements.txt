@@ -5,6 +5,7 @@ paddleocr
 paddlepaddle
 pandas
 cloudinary
+openpyxl
 python-dotenv
 requests
 gunicorn==21.2.0
