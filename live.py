@@ -138,3 +138,9 @@ def download():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
     app.run(host="0.0.0.0", port=port)
+
+
+
+print("Checking Tesseract installation...")
+os.system("which tesseract")  # Should return a path if installed
+os.system("tesseract --version")  # Should print the version if installed
