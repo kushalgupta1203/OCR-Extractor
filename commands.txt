@@ -5,8 +5,16 @@ ocr_env\Scripts\activate
 # Install Libraries
 pip install -r requirements.txt
 
-# Run the OCR script manually
+# Run the application locally
 python backend.py
 
-# Run the live flask application
+# Run the application live (on render)
 python live.py
+
+# Build Command (on render)
+pip install -r requirements.txt
+
+# Start Command (on render)
+gunicorn --bind 0.0.0.0:$PORT live:app
+
+# For render, set the environment variables from .env file
