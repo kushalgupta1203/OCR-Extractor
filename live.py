@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, send_file, jsonify
 import os
 import cv2
 import numpy as np
-import pytesseract
+from paddleocr import PaddleOCR
 import pandas as pd
 from io import BytesIO
 import cloudinary
@@ -14,23 +14,14 @@ import requests
 
 app = Flask(__name__)
 
-tesseract_path = os.popen("which tesseract").read().strip()
-
-if tesseract_path:
-    print(f"Tesseract is installed at: {tesseract_path}")
-else:
-    print("Tesseract is NOT installed!")
-
-# Also check Tesseract version
-os.system("tesseract --version")
-
-
-
 # Load environment variables
 if os.getenv("VERCEL"):
     print("Running on Vercel, using environment variables.")
 else:
     load_dotenv()  # Load .env for local development
+
+# Initialize PaddleOCR reader
+ocr_reader = PaddleOCR(use_angle_cls=True, lang='en')
 
 # Function to download image from Cloudinary and convert it to OpenCV format
 def url_to_image(url):
@@ -40,9 +31,9 @@ def url_to_image(url):
         return cv2.imdecode(image_array, cv2.IMREAD_GRAYSCALE)  # Convert to grayscale
     return None
 
-# Function to extract barcode text using Tesseract OCR
+# Function to extract barcode text using PaddleOCR
 def extract_text_under_barcode(image_url):
-    """Extract only the alphanumeric text appearing directly under the barcode."""
+    """Extract only the alphanumeric text appearing directly under the barcode using PaddleOCR."""
     image = url_to_image(image_url)
     if image is None:
         return "Error loading image"
@@ -51,18 +42,18 @@ def extract_text_under_barcode(image_url):
     image = cv2.GaussianBlur(image, (5, 5), 0)  # Reduce noise
     _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)  # Binarization
 
-    # Extract text using Tesseract OCR
-    extracted_texts = pytesseract.image_to_string(image, config="--psm 6")
-    
-    # Filter only alphanumeric text (barcode format)
+    # Extract text using PaddleOCR
+    result = ocr_reader.ocr(image, cls=True)
+
+    # Extract and filter alphanumeric text
     extracted_code = ""
-    max_y = float('-inf')
-    
-    for line in extracted_texts.split("\n"):
-        text = re.sub(r'[^a-zA-Z0-9]', '', line.strip())  # Keep only alphanumeric text
-        if 8 <= len(text) <= 30:
-            extracted_code = text
-    
+    for line in result:
+        for word_info in line:
+            text = word_info[1][0]  # Extract recognized text
+            cleaned_text = re.sub(r'[^a-zA-Z0-9]', '', text.strip())  # Keep only alphanumeric text
+            if 8 <= len(cleaned_text) <= 30:
+                extracted_code = cleaned_text
+
     return extracted_code or "No barcode detected"
 
 def process_images(image_urls):
@@ -150,4 +141,3 @@ def download():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
     app.run(host="0.0.0.0", port=port)
-
