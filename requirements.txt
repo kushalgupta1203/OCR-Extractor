@@ -1,9 +1,10 @@
 flask
 gunicorn
-easyocr
+pytesseract
+opencv-python
 pandas
 pillow
-python-barcode
 openpyxl
 cloudinary
 python-dotenv
+requests

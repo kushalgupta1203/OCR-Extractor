@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import os
-import easyocr
+import cv2
+import numpy as np
+import pytesseract
 import pandas as pd
 from io import BytesIO
 import cloudinary
@@ -8,6 +10,7 @@ import cloudinary.uploader
 import cloudinary.api
 from dotenv import load_dotenv
 import re
+import requests
 
 app = Flask(__name__)
 
@@ -17,25 +20,38 @@ if os.getenv("VERCEL"):
 else:
     load_dotenv()  # Load .env for local development
 
-# Initialize EasyOCR reader with minimal settings (disable GPU & model re-downloads)
-reader = easyocr.Reader(['en'], gpu=False, download_enabled=False)
+# Function to download image from Cloudinary and convert it to OpenCV format
+def url_to_image(url):
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        image_array = np.asarray(bytearray(response.raw.read()), dtype=np.uint8)
+        return cv2.imdecode(image_array, cv2.IMREAD_GRAYSCALE)  # Convert to grayscale
+    return None
 
+# Function to extract barcode text using Tesseract OCR
 def extract_text_under_barcode(image_url):
-    """Extract only the alphanumeric text that appears directly under the barcode from Cloudinary image URL."""
-    extracted_texts = reader.readtext(image_url, detail=1)
+    """Extract only the alphanumeric text appearing directly under the barcode."""
+    image = url_to_image(image_url)
+    if image is None:
+        return "Error loading image"
+
+    # Preprocessing: Increase contrast and threshold
+    image = cv2.GaussianBlur(image, (5, 5), 0)  # Reduce noise
+    _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)  # Binarization
+
+    # Extract text using Tesseract OCR
+    extracted_texts = pytesseract.image_to_string(image, config="--psm 6")
     
+    # Filter only alphanumeric text (barcode format)
     extracted_code = ""
     max_y = float('-inf')
     
-    for bbox, text, _ in extracted_texts:
-        text = re.sub(r'[^a-zA-Z0-9]', '', text)  # Keep only alphanumeric
-        (x_min, y_min, x_max, y_max) = bbox[0][1], bbox[2][1], bbox[0][0], bbox[2][0]
-        
-        if y_min > max_y and 8 <= len(text) <= 30:
-            max_y = y_min
+    for line in extracted_texts.split("\n"):
+        text = re.sub(r'[^a-zA-Z0-9]', '', line.strip())  # Keep only alphanumeric text
+        if 8 <= len(text) <= 30:
             extracted_code = text
     
-    return extracted_code
+    return extracted_code or "No barcode detected"
 
 def process_images(image_urls):
     """Extract barcode text and save to Excel."""
