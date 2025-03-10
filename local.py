@@ -55,66 +55,48 @@ def extract_text_under_barcode(image_url):
 
     return extracted_code or "No barcode detected"
 
-def process_images(image_urls):
-    """Extract barcode text and save to Excel."""
-    data_list = []
+def generate_excel(data_list):
+    """Generate and return an Excel file with hyperlinks."""
+    df = pd.DataFrame(data_list, columns=["Image URL", "Extracted Code"])
+    
+    # Save DataFrame to an Excel buffer
     excel_buffer = BytesIO()
-    df = pd.DataFrame(columns=["Image URL", "Extracted Code"])
+    df.to_excel(excel_buffer, index=False, engine='openpyxl')
     
-    for image_url in image_urls:
-        try:
-            extracted_code = extract_text_under_barcode(image_url)
-            print(f"Processing {image_url} -> Extracted Code: {extracted_code}")  # Debugging
-
-            data_list.append({
-                "Image URL": image_url,
-                "Extracted Code": extracted_code if extracted_code else "No code detected"
-            })
-
-            df = pd.concat([df, pd.DataFrame([[image_url, extracted_code]], columns=["Image URL", "Extracted Code"])], ignore_index=True)
-
-        except Exception as e:
-            print(f"Error processing image {image_url}: {e}")
-            continue
-    
-   # Convert "Image URL" to clickable links for HTML table
-    df_html = df.copy()
-    df_html['Image URL'] = df_html['Image URL'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>')
-    
-    # Generate HTML table
-    table_html = df_html.to_html(escape=False, classes='table table-striped', index=False, border=0)
-
-    # Save to Excel
-    df.to_excel(excel_buffer, index=False)
+    # Load workbook for modifications
     excel_buffer.seek(0)
-    
-    # Load the Excel file to adjust alignment and make URLs clickable
-    wb = openpyxl.load_workbook(filename=BytesIO(excel_buffer.read()))
+    wb = openpyxl.load_workbook(excel_buffer)
     ws = wb.active
-    
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):  # Skip header row
-        cell = row[0]  # First column
-        cell.value = f'=HYPERLINK("{cell.value}", "{cell.value}")'  # Make URL clickable
-       # cell.alignment = Alignment(horizontal='left')  ## REMOVE THIS LINE
-    
-    # Save changes back to BytesIO
-    excel_buffer.seek(0)
-    wb.save(excel_buffer)
-    excel_buffer.seek(0)
-    
-    return data_list, excel_buffer, table_html
 
-processed_excel_buffer = None  # Store latest processed file
+    # Convert image URLs to clickable hyperlinks in Excel
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):  
+        cell = row[0]  # First column
+        cell.value = f'=HYPERLINK("{cell.value}", "{cell.value}")'
+
+    # Save changes to a new buffer
+    new_excel_buffer = BytesIO()
+    wb.save(new_excel_buffer)
+    new_excel_buffer.seek(0)
+
+    return new_excel_buffer  # Return processed Excel file
+
+def generate_html_table(data_list):
+    """Generate HTML table with clickable links."""
+    html_table = '<table class="table table-striped"><thead><tr><th>Image</th><th>Extracted Code</th></tr></thead><tbody>'
+    for data in data_list:
+        html_table += f'<tr><td><a href="{data["Image URL"]}" target="_blank">{data["Image URL"]}</a></td><td>{data["Extracted Code"]}</td></tr>'
+    html_table += '</tbody></table>'
+    return html_table
+
+processed_excel_buffer = None  # Store latest processed Excel file
 
 @app.route("/", methods=["GET", "POST"])
 def index():
     global processed_excel_buffer
     if request.method == "POST":
         uploaded_files = request.files.getlist("images")
-        
-        # Debugging: Check if files are received
+
         if not uploaded_files or all(file.filename == "" for file in uploaded_files):
-            print("No files received or empty filenames.")
             return jsonify({"error": "No valid files uploaded."})
 
         image_urls = []
@@ -124,21 +106,21 @@ def index():
                     upload_result = cloudinary.uploader.upload(file)
                     image_urls.append(upload_result["secure_url"])
                 except Exception as e:
-                    print(f"Cloudinary upload failed: {e}")
                     return jsonify({"error": "Cloudinary upload failed.", "details": str(e)})
             else:
-                print(f"Invalid file format: {file.filename}")
                 return jsonify({"error": "Only PNG, JPG, JPEG files are allowed."})
 
         if not image_urls:
             return jsonify({"error": "No valid images found in the uploaded files."})
 
         try:
-            data_list, excel_buffer, table_html = process_images(image_urls)
+            data_list = [{"Image URL": url, "Extracted Code": extract_text_under_barcode(url)} for url in image_urls]
+
             if not data_list:
                 return jsonify({"error": "No barcodes detected in the uploaded images."})
 
-            processed_excel_buffer = excel_buffer
+            processed_excel_buffer = generate_excel(data_list)  # Store Excel file
+            table_html = generate_html_table(data_list)  # Generate HTML table
 
             return jsonify({
                 "success": "Images processed successfully.",
@@ -146,7 +128,6 @@ def index():
                 "download_url": "/download"
             })
         except Exception as e:
-            print(f"Processing error: {e}")
             return jsonify({"error": f"An error occurred: {e}"})
     
     return render_template("local.html")

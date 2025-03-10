@@ -6,7 +6,7 @@ ocr_env\Scripts\activate
 pip install -r requirements.txt
 
 # Run the application locally
-python backend.py
+python local.py
 
 # Run the application live (on render)
 python live.py
