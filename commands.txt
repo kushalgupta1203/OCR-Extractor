@@ -15,6 +15,6 @@ python live.py
 pip install -r requirements.txt
 
 # Start Command (on render)
-gunicorn --bind 0.0.0.0:$PORT live:app
+gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 live:app
 
 # For render, set the environment variables from .env file
