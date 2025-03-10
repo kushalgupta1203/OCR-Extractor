@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, send_file, jsonify
 import os
 import cv2
 import numpy as np
-from paddleocr import PaddleOCR
+import pytesseract
 import pandas as pd
 from io import BytesIO
 import cloudinary
@@ -20,10 +20,10 @@ if os.getenv("VERCEL"):
 else:
     load_dotenv()  # Load .env for local development
 
-# Initialize PaddleOCR reader
-ocr_reader = PaddleOCR(use_angle_cls=True, lang='en')
+# Set Tesseract Path for Render (if needed)
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 
-# Global variable to store processed data (avoiding excessive memory usage)
+# Global variable to store processed data
 processed_data_list = []
 
 def url_to_image(url):
@@ -35,12 +35,12 @@ def url_to_image(url):
     return None
 
 def extract_text_under_barcode(image_url):
-    """Extract only the alphanumeric text appearing directly under the barcode using PaddleOCR."""
+    """Extract alphanumeric text appearing under the barcode using Tesseract OCR."""
     image = url_to_image(image_url)
     if image is None:
         return "Error loading image"
 
-    # Resize (if too large) to reduce memory usage
+    # Resize to standard dimensions (to handle large images)
     if image.shape[0] > 1000 or image.shape[1] > 1000:
         image = cv2.resize(image, (1000, 1000))
 
@@ -48,17 +48,15 @@ def extract_text_under_barcode(image_url):
     image = cv2.GaussianBlur(image, (5, 5), 0)  # Reduce noise
     _, image = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)  # Binarization
 
-    # Extract text using PaddleOCR
-    result = ocr_reader.ocr(image, cls=True)
+    # Extract text using Tesseract OCR
+    extracted_text = pytesseract.image_to_string(image, config='--psm 6')  # PSM 6 is good for block text
 
-    # Extract and filter alphanumeric text
+    # Extract and filter alphanumeric text (barcode text usually has a specific format)
     extracted_code = ""
-    for line in result:
-        for word_info in line:
-            text = word_info[1][0]  # Extract recognized text
-            cleaned_text = re.sub(r'[^a-zA-Z0-9]', '', text.strip())  # Keep only alphanumeric text
-            if 8 <= len(cleaned_text) <= 30:
-                extracted_code = cleaned_text
+    for line in extracted_text.split("\n"):
+        cleaned_text = re.sub(r'[^a-zA-Z0-9]', '', line.strip())  # Keep only alphanumeric text
+        if 8 <= len(cleaned_text) <= 30:  # Barcode range check
+            extracted_code = cleaned_text
 
     return extracted_code or "No barcode detected"
 

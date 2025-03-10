@@ -18,3 +18,7 @@ pip install -r requirements.txt
 gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 live:app
 
 # For render, set the environment variables from .env file
+
+# Build Command for using pytesseract
+apt-get update && apt-get install -y tesseract-ocr
+pip install -r requirements.txt 

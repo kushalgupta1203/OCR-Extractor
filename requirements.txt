@@ -1,11 +1,10 @@
 Flask
 opencv-python-headless
 numpy
-paddleocr
+pytesseract
 pandas
 cloudinary
 openpyxl
 python-dotenv
 requests
 gunicorn==21.2.0
-paddlepaddle
