@@ -1,7 +1,6 @@
 Flask
 opencv-python-headless
 numpy
-pytesseract
 pandas
 cloudinary
 openpyxl
