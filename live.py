@@ -139,5 +139,5 @@ def download():
     return send_file(processed_excel_buffer, download_name="barcode_extraction_report.xlsx", as_attachment=True)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Default to 10000, but use Render's PORT
+    port = int(os.environ.get("PORT", 5000)) 
     app.run(host="0.0.0.0", port=port, debug=True)
