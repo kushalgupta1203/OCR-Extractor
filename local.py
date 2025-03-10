@@ -11,14 +11,13 @@ import cloudinary.api
 from dotenv import load_dotenv
 import re
 import requests
+import openpyxl
+from openpyxl.styles import Alignment
 
 app = Flask(__name__)
 
 # Load environment variables
-if os.getenv("VERCEL"):
-    print("Running on Vercel, using environment variables.")
-else:
-    load_dotenv()  # Load .env for local development
+load_dotenv()
 
 # Initialize PaddleOCR reader
 ocr_reader = PaddleOCR(use_angle_cls=True, lang='en')
@@ -78,9 +77,32 @@ def process_images(image_urls):
             print(f"Error processing image {image_url}: {e}")
             continue
     
+   # Convert "Image URL" to clickable links for HTML table
+    df_html = df.copy()
+    df_html['Image URL'] = df_html['Image URL'].apply(lambda x: f'<a href="{x}" target="_blank">{x}</a>')
+    
+    # Generate HTML table
+    table_html = df_html.to_html(escape=False, classes='table table-striped', index=False, border=0)
+
+    # Save to Excel
     df.to_excel(excel_buffer, index=False)
     excel_buffer.seek(0)
-    return data_list, excel_buffer
+    
+    # Load the Excel file to adjust alignment and make URLs clickable
+    wb = openpyxl.load_workbook(filename=BytesIO(excel_buffer.read()))
+    ws = wb.active
+    
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):  # Skip header row
+        cell = row[0]  # First column
+        cell.value = f'=HYPERLINK("{cell.value}", "{cell.value}")'  # Make URL clickable
+       # cell.alignment = Alignment(horizontal='left')  ## REMOVE THIS LINE
+    
+    # Save changes back to BytesIO
+    excel_buffer.seek(0)
+    wb.save(excel_buffer)
+    excel_buffer.seek(0)
+    
+    return data_list, excel_buffer, table_html
 
 processed_excel_buffer = None  # Store latest processed file
 
@@ -112,7 +134,7 @@ def index():
             return jsonify({"error": "No valid images found in the uploaded files."})
 
         try:
-            data_list, excel_buffer = process_images(image_urls)
+            data_list, excel_buffer, table_html = process_images(image_urls)
             if not data_list:
                 return jsonify({"error": "No barcodes detected in the uploaded images."})
 
@@ -120,14 +142,14 @@ def index():
 
             return jsonify({
                 "success": "Images processed successfully.",
-                "tables": pd.DataFrame(data_list).to_html(classes='table table-bordered', index=False),
+                "table_html": table_html,
                 "download_url": "/download"
             })
         except Exception as e:
             print(f"Processing error: {e}")
             return jsonify({"error": f"An error occurred: {e}"})
     
-    return render_template("index.html")
+    return render_template("local.html")
 
 @app.route("/download")
 def download():
