@@ -17,8 +17,8 @@ if os.getenv("VERCEL"):
 else:
     load_dotenv()  # Load .env for local development
 
-# Initialize EasyOCR reader
-reader = easyocr.Reader(['en'])
+# Initialize EasyOCR reader with minimal settings (disable GPU & model re-downloads)
+reader = easyocr.Reader(['en'], gpu=False, download_enabled=False)
 
 def extract_text_under_barcode(image_url):
     """Extract only the alphanumeric text that appears directly under the barcode from Cloudinary image URL."""
@@ -122,5 +122,3 @@ def download():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))  # Render assigns a dynamic port
     app.run(host="0.0.0.0", port=port)
-
-
