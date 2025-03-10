@@ -143,7 +143,7 @@
                     <p id="fileList"></p>
                     <button type="submit" class="btn btn-primary mt-3" style="display: none;" id="processButton">Upload & Process</button>
                 </form>
-                <p id="processing">Processing... <span id="timer">0 seconds</span></p>
+                <p id="processing">Processing...</p>
             </div>
 
             <div id="results" class="tab-pane fade">
@@ -183,15 +183,8 @@
             $("#uploadForm").on("submit", function(event) {
                 event.preventDefault();
                 let formData = new FormData(this);
-                $("#processing").show();
-                let startTime = new Date().getTime();
-                let timerInterval = setInterval(function() {
-                    let currentTime = new Date().getTime();
-                    let elapsedTime = Math.floor((currentTime - startTime) / 1000);
-                    let estimatedTime = Math.floor(elapsedTime * 1.5);
-                    $("#timer").text(`Elapsed: ${elapsedTime} seconds, Estimated: ${estimatedTime} seconds`);
-                }, 1000);
-
+                $("#processing").text("Processing...").show(); // Show "Processing..."
+                
                 $.ajax({
                     url: "/",
                     type: "POST",
@@ -199,8 +192,7 @@
                     contentType: false,
                     processData: false,
                     success: function(response) {
-                        clearInterval(timerInterval);
-                        $("#processing").hide();
+                        $("#processing").hide(); // Hide "Processing..." on success
                         if (response.success) {
                             $("#results-table").html(response.table_html);
                             $("#download-button").show();
@@ -210,8 +202,7 @@
                         }
                     },
                     error: function() {
-                        clearInterval(timerInterval);
-                        $("#processing").hide();
+                        $("#processing").hide(); // Hide "Processing..." on error
                         alert("Error in uploading files.");
                     }
                 });

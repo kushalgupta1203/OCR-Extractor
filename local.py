@@ -130,7 +130,7 @@ def index():
         except Exception as e:
             return jsonify({"error": f"An error occurred: {e}"})
     
-    return render_template("local.html")
+    return render_template("index.html")
 
 @app.route("/download")
 def download():
