@@ -1,6 +1,3 @@
-## Link
-https://ocr-extractor.onrender.com/
-
 # OCR Extractor
 
 OCR Extractor is a web-based application that extracts barcode and metadata from uploaded images and generates an Excel report. The extracted text and data are displayed on the frontend.
@@ -19,4 +16,6 @@ OCR Extractor is a web-based application that extracts barcode and metadata from
 - **Cloud Storage:** Cloudinary, OCR Space, Render
 - **Data Handling:** Pandas (for Excel generation)
 
+## Link
+https://ocr-extractor.onrender.com/
 
