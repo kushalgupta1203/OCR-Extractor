@@ -94,6 +94,22 @@
         .upload-button:hover {
             background-color: #0056b3;
         }
+
+        .thumbnail {
+            max-width: 100px;
+            max-height: 60px;
+            border: 1px solid #ddd;
+            padding: 2px;
+            margin-right: 5px;
+        }
+        .image-link, .code-link {
+            display: inline-flex;
+            align-items: center;
+        }
+        .code-link {
+            color: #007BFF !important;
+            text-decoration: none;
+        }
     </style>
 </head>
 <body>
@@ -186,8 +202,7 @@
                         clearInterval(timerInterval);
                         $("#processing").hide();
                         if (response.success) {
-                            $("#results-table").html(response.tables[0]);
-                            $("#download-button").attr("href", "/download");
+                            $("#results-table").html(response.table_html);
                             $("#download-button").show();
                             $('a[href="#results"]').tab('show');
                         } else {
@@ -203,7 +218,7 @@
             });
 
             $("#download-button").on("click", function() {
-                window.location.href = $(this).attr("href");
+                window.location.href = "/download";
             });
         });
     </script>

@@ -7,6 +7,8 @@ import cloudinary.uploader
 import requests
 import re
 from dotenv import load_dotenv
+from openpyxl import Workbook
+from openpyxl.styles import Font
 
 app = Flask(__name__)
 
@@ -68,27 +70,66 @@ def process_images(image_urls):
         })
 
 def generate_excel():
-    """Generate an Excel file dynamically."""
+    """Generate Excel with proper hyperlink formatting."""
     if not processed_data_list:
         return None
 
-    df = pd.DataFrame(processed_data_list, columns=["Image URL", "Extracted Code"])
-    excel_buffer = BytesIO()
-    df.to_excel(excel_buffer, index=False, engine='openpyxl')
-    excel_buffer.seek(0)
+    try:
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["Image URL", "Extracted Code"])
+        
+        # Add data with hyperlink formatting
+        for data in processed_data_list:
+            row = [
+                data['Image URL'],
+                data['Extracted Code']
+            ]
+            ws.append(row)
+            
+            # Create hyperlink for image URL
+            cell = ws.cell(row=ws.max_row, column=1)
+            cell.hyperlink = data['Image URL']
+            cell.font = Font(color="0000FF", underline="single")
 
-    return excel_buffer
+        # Set column widths
+        ws.column_dimensions['A'].width = 60
+        ws.column_dimensions['B'].width = 30
+
+        excel_buffer = BytesIO()
+        wb.save(excel_buffer)
+        excel_buffer.seek(0)
+        return excel_buffer
+
+    except Exception as e:
+        print(f"Excel generation error: {str(e)}")
+        return None
 
 def generate_html_table():
-    """Generate an HTML table with extracted data."""
+    """Generate an HTML table with clickable thumbnails and codes."""
     if not processed_data_list:
         return "<p>No data available.</p>"
 
-    html_table = '<table class="table table-striped"><thead><tr><th>Image</th><th>Extracted Code</th></tr></thead><tbody>'
+    html_table = '''<table class="table table-striped">
+        <thead><tr><th>Image</th><th>Extracted Code</th></tr></thead>
+        <tbody>'''
+    
     for data in processed_data_list:
-        html_table += f'<tr><td><a href="{data["Image URL"]}" target="_blank">{data["Image URL"]}</a></td><td>{data["Extracted Code"]}</td></tr>'
+        html_table += f'''
+        <tr>
+            <td>
+                <a href="{data['Image URL']}" target="_blank" class="image-link">
+                    <img src="{data['Image URL']}" class="thumbnail">
+                </a>
+            </td>
+            <td>
+                <a href="{data['Image URL']}" target="_blank" class="code-link">
+                    {data['Extracted Code']}
+                </a>
+            </td>
+        </tr>'''
     html_table += '</tbody></table>'
-
+    
     return html_table
 
 @app.route("/", methods=["GET", "POST"])
