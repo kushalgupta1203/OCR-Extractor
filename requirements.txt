@@ -7,3 +7,4 @@ pandas
 cloudinary
 python-dotenv
 requests
+gunicorn
