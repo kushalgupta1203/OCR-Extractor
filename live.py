@@ -23,37 +23,55 @@ OCR_API_URL = "https://api.ocr.space/parse/image"  # Change this if using a diff
 processed_data_list = []
 
 def extract_text_under_barcode(image_url):
-    """Extract text using an OCR API."""
+    """Extract ONLY the text directly below barcode using OCR spatial data."""
     if not OCR_API_KEY:
         return "OCR API Key is missing"
 
     try:
+        # Request OCR data with coordinates
         payload = {
             "apikey": OCR_API_KEY,
             "url": image_url,
             "language": "eng",
-            "isOverlayRequired": False
+            "isOverlayRequired": True  # Crucial for coordinates
         }
         response = requests.post(OCR_API_URL, data=payload)
         result = response.json()
 
-        # Extract text from API response
-        extracted_text = ""
+        # Parse text elements with coordinates
+        text_elements = []
         if "ParsedResults" in result:
-            for item in result["ParsedResults"]:
-                extracted_text += item["ParsedText"] + "\n"
+            for result in result["ParsedResults"]:
+                if "TextOverlay" in result and "Lines" in result["TextOverlay"]:
+                    for line in result["TextOverlay"]["Lines"]:
+                        if line["Words"]:
+                            text = line["LineText"].strip()
+                            y_position = line["Words"][0]["Top"]  # Top Y coordinate
+                            text_elements.append({
+                                "text": text,
+                                "y": y_position
+                            })
 
-        # Extract only alphanumeric barcode-like text
-        extracted_code = ""
-        for line in extracted_text.split("\n"):
-            cleaned_text = re.sub(r'[^a-zA-Z0-9]', '', line.strip())  # Keep only alphanumeric characters
-            if 8 <= len(cleaned_text) <= 30:  # Barcode-like length
-                extracted_code = cleaned_text
+        if not text_elements:
+            return "No text detected"
 
-        return extracted_code or "No barcode detected"
+        # Sort text elements by vertical position (top to bottom)
+        text_elements.sort(key=lambda x: x["y"])
+
+        # Find the candidate barcode text (longest valid code at top)
+        candidate_code = ""
+        for element in text_elements:
+            cleaned = re.sub(r'[^A-Z0-9]', '', element["text"].upper())
+            if 8 <= len(cleaned) <= 30:
+                candidate_code = cleaned
+                break  # Take first valid code in reading order
+
+        return candidate_code or "No code below barcode"
 
     except Exception as e:
-        return f"OCR API Error: {str(e)}"
+        return f"OCR Error: {str(e)}"
+
+
 
 def process_images(image_urls):
     """Extract barcode text and store data for rendering & Excel generation."""
