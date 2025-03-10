@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: flask-app  # Change this to your app name
+    env: python
+    region: oregon  # or any preferred region
+    plan: free  # Change to "starter" or "pro" if needed
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn live:app
+    envVars:
+      - key: PORT
+        value: 5000
