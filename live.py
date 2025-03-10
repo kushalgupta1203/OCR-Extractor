@@ -12,6 +12,9 @@ from dotenv import load_dotenv
 import re
 import requests
 
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
+
 app = Flask(__name__)
 
 # Load environment variables
@@ -142,5 +145,8 @@ if __name__ == "__main__":
 
 
 print("Checking Tesseract installation...")
-os.system("which tesseract")  # Should return a path if installed
-os.system("tesseract --version")  # Should print the version if installed
+os.system("which tesseract")
+os.system("tesseract --version")
+
+
+
