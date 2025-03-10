@@ -14,6 +14,18 @@ import requests
 
 app = Flask(__name__)
 
+tesseract_path = os.popen("which tesseract").read().strip()
+
+if tesseract_path:
+    print(f"Tesseract is installed at: {tesseract_path}")
+else:
+    print("Tesseract is NOT installed!")
+
+# Also check Tesseract version
+os.system("tesseract --version")
+
+
+
 # Load environment variables
 if os.getenv("VERCEL"):
     print("Running on Vercel, using environment variables.")
