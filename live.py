@@ -120,4 +120,6 @@ def download():
     return send_file(processed_excel_buffer, download_name="barcode_extraction_report.xlsx", as_attachment=True)
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    port = int(os.environ.get("PORT", 10000))  # Render assigns a dynamic port
+    app.run(debug=True, host="0.0.0.0", port=port)
+
