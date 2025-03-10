@@ -183,8 +183,10 @@
             $("#uploadForm").on("submit", function(event) {
                 event.preventDefault();
                 let formData = new FormData(this);
-                $("#processing").text("Processing...").show(); // Show "Processing..."
-                
+                $("#processing").show();
+                $("#results-table").empty();
+                $("#download-button").hide();
+
                 $.ajax({
                     url: "/",
                     type: "POST",
@@ -192,7 +194,7 @@
                     contentType: false,
                     processData: false,
                     success: function(response) {
-                        $("#processing").hide(); // Hide "Processing..." on success
+                        $("#processing").hide();
                         if (response.success) {
                             $("#results-table").html(response.table_html);
                             $("#download-button").show();
@@ -201,9 +203,9 @@
                             alert(response.error || "An error occurred.");
                         }
                     },
-                    error: function() {
-                        $("#processing").hide(); // Hide "Processing..." on error
-                        alert("Error in uploading files.");
+                    error: function(xhr) {
+                        $("#processing").hide();
+                        alert(`Error: ${xhr.status} - ${xhr.statusText}`);
                     }
                 });
             });
