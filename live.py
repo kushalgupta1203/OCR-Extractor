@@ -130,6 +130,7 @@ def generate_html_table():
         logger.error(f"HTML generation error: {str(e)}")
         return "<div class='alert alert-danger'>Error generating results</div>"
 
+@app.route('/get_fact')
 def get_fact():
     fact = randfacts.get_fact()
     return jsonify({'fact': fact})

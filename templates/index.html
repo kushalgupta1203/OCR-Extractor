@@ -220,9 +220,15 @@
     <script>
         // Fetch a fun fact from the Python server
         async function loadFact() {
-            const response = await fetch('/get_fact'); // Fetch from Flask server
-            const data = await response.json();
-            document.getElementById('fact-text').innerText = data.fact; // Update HTML
+            try {
+                const response = await fetch('/get_fact');
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                document.getElementById('fact-text').innerText = data.fact;
+            } catch (error) {
+                console.error('Fact loading failed:', error);
+                document.getElementById('fact-text').innerText = "Did you know? This error message is our fun fact for today!";
+            }
         }
 
         window.onload = loadFact; // Load fact when the page loads
