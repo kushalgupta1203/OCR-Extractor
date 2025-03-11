@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, send_file, jsonify
 import os
 import requests
 import re
+import randfacts
 from io import BytesIO
 import cloudinary
 from cloudinary.uploader import upload
@@ -128,6 +129,11 @@ def generate_html_table():
     except Exception as e:
         logger.error(f"HTML generation error: {str(e)}")
         return "<div class='alert alert-danger'>Error generating results</div>"
+
+def get_fact():
+    fact = randfacts.get_fact()
+    return jsonify({'fact': fact})
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
