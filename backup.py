@@ -16,7 +16,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Allow up to 16MB
 
 # Configure Cloudinary
 cloudinary.config(
@@ -69,16 +68,10 @@ def extract_text_under_barcode(image_url):
         # Sort by vertical position and find the best candidate
         texts.sort(key=lambda x: x["y"])
         
-        extracted_texts = []
         for text in texts:
             cleaned = re.sub(r'[^A-Z0-9]', '', text["text"].upper())
             if 8 <= len(cleaned) <= 30:
-                extracted_texts.append(cleaned)
-            else:
-                extracted_texts.append(text["text"])  # Append all extracted texts
-
-        if extracted_texts:
-            return "\n".join(extracted_texts)  # Return all extracted texts
+                return cleaned
 
         return "No valid code found"
 
@@ -127,7 +120,7 @@ def generate_html_table():
                     </a>
                 </td>
                 <td class="align-middle">
-                    <pre>{data['Extracted Code']}</pre>
+                    <code>{data['Extracted Code']}</code>
                 </td>
             </tr>'''
         html += '</tbody></table>'
@@ -141,6 +134,7 @@ def generate_html_table():
 def get_fact():
     fact = randfacts.get_fact()
     return jsonify({'fact': fact})
+
 
 @app.route("/", methods=["GET", "POST"])
 def index():
