@@ -1,0 +1,40 @@
+### OCR Extractor - Technology Summary  
+
+#### Frontend & Backend  
+- Flask, HTML, CSS  
+  - Lightweight, easy to set up  
+  - Limited for complex UI  
+
+#### OCR Libraries Tested  
+1. Pytesseract  
+   - Best text extraction accuracy  
+   - Open-source and customizable  
+   - Cannot run efficiently in live deployment  
+   - Requires proper preprocessing for best results  
+
+2. ZBar  
+   - Good for barcode recognition  
+   - Fast and efficient for simple scans  
+   - Not useful for general text OCR  
+
+3. EasyOCR  
+   - Supports multiple languages  
+   - Works offline  
+   - Large dependency size (~1GB), difficult to deploy  
+   - Slower processing compared to Pytesseract  
+
+4. OCRSpace API (Final Choice)  
+   - Free tier available  
+   - Easy to integrate and deploy  
+   - Slightly lower accuracy than Pytesseract  
+   - Limited by API rate restrictions  
+
+#### Deployment  
+- Tried Netlify and other services  
+- Render chosen as it offers the best free-tier option  
+- Easy to manage and supports backend integration  
+
+#### Alternative Models & Cloud Usage  
+- Tried Hugging Face with Gemma and Microsoft OCR models  
+- Can work locally with proper configuration  
+- Requires higher cloud resources for better live model performance  

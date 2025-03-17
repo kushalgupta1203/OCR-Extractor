@@ -1,5 +1,7 @@
 "ocr_venv/" 
 ocr_env/
+trocr_model/
+"trocr_model/"
 "images/"
 images/
 "uploads/"
