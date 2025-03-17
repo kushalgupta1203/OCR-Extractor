@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import os
-import requests
 from io import BytesIO
 import cloudinary
 from cloudinary.uploader import upload
@@ -9,6 +8,8 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 import logging
 from dotenv import load_dotenv
+from PIL import Image
+import pytesseract
 
 # Load environment variables
 load_dotenv()
@@ -41,38 +42,16 @@ def upload_image_to_cloudinary(image_bytes):
         logger.error(f"Cloudinary upload failed: {str(e)}")
         return None
 
-def extract_text_from_image(image_url):
+def extract_text_from_image(image_bytes):
     """
-    Uses OCR.space to extract barcode and alphanumeric code from the image.
+    Uses Tesseract OCR via pytesseract to extract text from the image.
     """
     try:
-        response = requests.post(
-            "https://api.ocr.space/parse/image",
-            data={
-                "apikey": os.getenv("OCR_API_KEY"),
-                "url": image_url,
-                "language": "eng",
-                "isOverlayRequired": False
-            },
-            timeout=TIMEOUT
-        )
-
-        if response.status_code != 200:
-            logger.error(f"OCR API Error: {response.status_code} - {response.text}")
-            return "OCR API Error"
-
-        data = response.json()
-        if not data.get("ParsedResults"):
-            return "No text detected"
-
-        extracted_text = data["ParsedResults"][0]["ParsedText"].strip()
-        return extracted_text if extracted_text else "No valid code found"
-
-    except requests.exceptions.Timeout:
-        logger.error("OCR request timed out")
-        return "OCR processing timed out"
+        image = Image.open(BytesIO(image_bytes))
+        extracted_text = pytesseract.image_to_string(image)
+        return extracted_text.strip() if extracted_text else "No valid code found"
     except Exception as e:
-        logger.error(f"OCR Error: {str(e)}")
+        logger.error(f"Tesseract OCR Error: {str(e)}")
         return "OCR processing failed"
 
 def generate_html_table():
@@ -104,12 +83,11 @@ def generate_html_table():
         logger.error(f"HTML generation error: {str(e)}")
         return "<div class='alert alert-danger'>Error generating results</div>"
 
-
 def process_images(image_files):
     """
     Processes each image:
     1. Uploads the image to Cloudinary.
-    2. Extracts barcode & alphanumeric text using OCR.space.
+    2. Extracts text using Tesseract OCR.
     """
     global processed_data_list
     processed_data_list.clear()
@@ -127,8 +105,8 @@ def process_images(image_files):
                 })
                 continue
 
-            # Extract barcode & text using OCR.space
-            extracted_code = extract_text_from_image(image_url)
+            # Extract text using Tesseract OCR
+            extracted_code = extract_text_from_image(image_bytes)
 
             processed_data_list.append({
                 "Image URL": image_url,

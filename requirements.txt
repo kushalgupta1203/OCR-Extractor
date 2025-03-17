@@ -8,4 +8,5 @@ python-dotenv
 randfacts
 requests
 gunicorn==21.2.0
+pytesseract
 
