@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request, send_file, jsonify
 import os
+import requests
+import re
+import randfacts
 from io import BytesIO
 import cloudinary
 from cloudinary.uploader import upload
@@ -8,8 +11,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font
 import logging
 from dotenv import load_dotenv
-from PIL import Image
-import pytesseract
 
 # Load environment variables
 load_dotenv()
@@ -30,29 +31,75 @@ logger = logging.getLogger(__name__)
 processed_data_list = []
 TIMEOUT = 300  # 5 minutes timeout
 
-def upload_image_to_cloudinary(image_bytes):
-    """Uploads an image to Cloudinary and returns the URL."""
+def extract_text_under_barcode(image_url):
+    """Improved OCR text extraction with enhanced error handling"""
     try:
-        upload_result = upload(
-            BytesIO(image_bytes),
-            resource_type="image"
+        response = requests.post(
+            "https://api.ocr.space/parse/image",
+            data={
+                "apikey": os.getenv("OCR_API_KEY"),
+                "url": image_url,
+                "language": "eng",
+                "isOverlayRequired": True
+            },
+            timeout=TIMEOUT
         )
-        return upload_result['secure_url']
-    except Exception as e:
-        logger.error(f"Cloudinary upload failed: {str(e)}")
-        return None
+        
+        if response.status_code != 200:
+            logger.error(f"OCR API Error: {response.status_code} - {response.text}")
+            return "OCR API Error"
 
-def extract_text_from_image(image_bytes):
-    """
-    Uses Tesseract OCR via pytesseract to extract text from the image.
-    """
-    try:
-        image = Image.open(BytesIO(image_bytes))
-        extracted_text = pytesseract.image_to_string(image)
-        return extracted_text.strip() if extracted_text else "No valid code found"
+        data = response.json()
+        if not data.get("ParsedResults"):
+            return "No text detected"
+
+        texts = []
+        for result in data["ParsedResults"]:
+            if "TextOverlay" in result and "Lines" in result["TextOverlay"]:
+                for line in result["TextOverlay"]["Lines"]:
+                    if line["Words"]:
+                        text = line["LineText"].strip()
+                        y_position = line["Words"][0]["Top"]
+                        texts.append({"text": text, "y": y_position})
+
+        if not texts:
+            return "No readable text"
+
+        # Sort by vertical position and find the best candidate
+        texts.sort(key=lambda x: x["y"])
+        
+        for text in texts:
+            cleaned = re.sub(r'[^A-Z0-9]', '', text["text"].upper())
+            if 8 <= len(cleaned) <= 30:
+                return cleaned
+
+        return "No valid code found"
+
+    except requests.exceptions.Timeout:
+        logger.error("OCR request timed out")
+        return "OCR processing timed out"
     except Exception as e:
-        logger.error(f"Tesseract OCR Error: {str(e)}")
+        logger.error(f"OCR Error: {str(e)}")
         return "OCR processing failed"
+
+def process_images(image_urls):
+    """Process images with proper error handling"""
+    global processed_data_list
+    processed_data_list.clear()
+    
+    for url in image_urls:
+        try:
+            code = extract_text_under_barcode(url)
+            processed_data_list.append({
+                "Image URL": url,
+                "Extracted Code": code if code else "No code detected"
+            })
+        except Exception as e:
+            logger.error(f"Error processing {url}: {str(e)}")
+            processed_data_list.append({
+                "Image URL": url,
+                "Extracted Code": "Processing error"
+            })
 
 def generate_html_table():
     """Generate HTML table with error handling"""
@@ -73,7 +120,7 @@ def generate_html_table():
                     </a>
                 </td>
                 <td class="align-middle">
-                    <pre>{data['Extracted Code']}</pre>
+                    <code>{data['Extracted Code']}</code>
                 </td>
             </tr>'''
         html += '</tbody></table>'
@@ -83,42 +130,11 @@ def generate_html_table():
         logger.error(f"HTML generation error: {str(e)}")
         return "<div class='alert alert-danger'>Error generating results</div>"
 
-def process_images(image_files):
-    """
-    Processes each image:
-    1. Uploads the image to Cloudinary.
-    2. Extracts text using Tesseract OCR.
-    """
-    global processed_data_list
-    processed_data_list.clear()
+@app.route('/get_fact')
+def get_fact():
+    fact = randfacts.get_fact()
+    return jsonify({'fact': fact})
 
-    for file in image_files:
-        try:
-            image_bytes = file.read()
-
-            # Upload image to Cloudinary
-            image_url = upload_image_to_cloudinary(image_bytes)
-            if not image_url:
-                processed_data_list.append({
-                    "Image URL": "N/A",
-                    "Extracted Code": "Cloudinary upload failed"
-                })
-                continue
-
-            # Extract text using Tesseract OCR
-            extracted_code = extract_text_from_image(image_bytes)
-
-            processed_data_list.append({
-                "Image URL": image_url,
-                "Extracted Code": extracted_code
-            })
-
-        except Exception as e:
-            logger.error(f"Error processing image: {str(e)}")
-            processed_data_list.append({
-                "Image URL": "N/A",
-                "Extracted Code": "Processing error"
-            })
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -128,13 +144,26 @@ def index():
                 return jsonify({"success": False, "error": "No files uploaded"})
 
             files = request.files.getlist('images')
-            valid_files = [f for f in files if f.filename.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            valid_files = [f for f in files if f and f.filename.lower().endswith(('.png', '.jpg', '.jpeg'))]
 
             if not valid_files:
                 return jsonify({"success": False, "error": "No valid image files"})
 
-            process_images(valid_files)
+            image_urls = []
+            for file in valid_files:
+                try:
+                    upload_result = upload(
+                        file.stream,
+                        timeout=TIMEOUT,
+                        resource_type="image"
+                    )
+                    image_urls.append(upload_result['secure_url'])
+                except Exception as e:
+                    logger.error(f"Cloudinary upload failed: {str(e)}")
+                    return jsonify({"success": False, "error": f"Failed to upload {file.filename}"})
 
+            process_images(image_urls)
+            
             return jsonify({
                 "success": True,
                 "table_html": generate_html_table(),
@@ -157,11 +186,11 @@ def download():
         wb = Workbook()
         ws = wb.active
         ws.append(["Image URL", "Extracted Code"])
-
+        
         for data in processed_data_list:
             row = [data['Image URL'], data['Extracted Code']]
             ws.append(row)
-
+            
             cell = ws.cell(row=ws.max_row, column=1)
             cell.hyperlink = data['Image URL']
             cell.font = Font(color="0000FF", underline="single")
@@ -172,7 +201,7 @@ def download():
         excel_buffer = BytesIO()
         wb.save(excel_buffer)
         excel_buffer.seek(0)
-
+        
         return send_file(
             excel_buffer,
             download_name="barcode_report.xlsx",
@@ -185,5 +214,5 @@ def download():
         return jsonify({"error": "Failed to generate download file"})
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5000)) 
     app.run(host="0.0.0.0", port=port, debug=True)
