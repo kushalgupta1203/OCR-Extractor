@@ -14,7 +14,7 @@ pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tessera
 SUPPORTED_FORMATS = ["png", "jpg", "jpeg", "tiff", "bmp"]
 
 def extract_text_from_image(image):
-    """Extract text from an image using pytesseract."""
+    """Extract code from the image."""
     try:
         text = pytesseract.image_to_string(image, lang='eng')
         cleaned_text = re.sub(r'[^A-Z0-9]', '', text.upper())
