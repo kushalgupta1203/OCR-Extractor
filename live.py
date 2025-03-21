@@ -234,7 +234,7 @@ def download():
         
         return send_file(
             excel_buffer,
-            download_name="barcode_report.xlsx",
+            download_name="report.xlsx",
             as_attachment=True,
             mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
