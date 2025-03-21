@@ -38,3 +38,4 @@
 - Tried Hugging Face with Gemma and Microsoft OCR models  
 - Can work locally with proper configuration  
 - Requires higher cloud resources for better live model performance  
+

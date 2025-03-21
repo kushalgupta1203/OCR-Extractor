@@ -21,3 +21,5 @@ OCR Extractor is a web-based application that extracts barcode and metadata from
 https://ocr-extractor.onrender.com/
 
 
+
+

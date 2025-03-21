@@ -10,3 +10,5 @@ model = VisionEncoderDecoderModel.from_pretrained(model_name)
 # Save locally
 processor.save_pretrained("./trocr_model")
 model.save_pretrained("./trocr_model")
+
+
