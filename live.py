@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 processed_data_list = []
 TIMEOUT = 300  # 5 minutes timeout
 
+# Directory to store sample images (relative to the script)
+SAMPLE_IMAGE_DIR = 'sample_images'
+os.makedirs(SAMPLE_IMAGE_DIR, exist_ok=True)
+
 def extract_text_under_barcode(image_url):
     """Improved OCR text extraction with enhanced error handling"""
     try:
@@ -144,7 +148,8 @@ def index():
                 return jsonify({"success": False, "error": "No files uploaded"})
 
             files = request.files.getlist('images')
-            valid_files = [f for f in files if f and f.filename.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            # Update allowed extensions
+            valid_files = [f for f in files if f and f.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.webp'))]
 
             if not valid_files:
                 return jsonify({"success": False, "error": "No valid image files"})
@@ -175,6 +180,31 @@ def index():
             return jsonify({"success": False, "error": "System error occurred"})
 
     return render_template("index.html")
+
+
+@app.route("/upload_sample", methods=["POST"])
+def upload_sample():
+    """Endpoint to handle sample image uploads."""
+    try:
+        if 'sample_images' not in request.files:
+            return jsonify({"success": False, "error": "No sample files uploaded"})
+
+        files = request.files.getlist('sample_images')
+        valid_files = [f for f in files if f and f.filename.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.webp'))]
+
+        if not valid_files:
+            return jsonify({"success": False, "error": "No valid sample image files"})
+
+        for file in valid_files:
+            filename = os.path.join(SAMPLE_IMAGE_DIR, file.filename)  # Save to sample image directory
+            file.save(filename)  # Save the file
+
+        return jsonify({"success": True, "message": "Sample images uploaded successfully"})
+
+    except Exception as e:
+        logger.error(f"Sample image upload error: {str(e)}")
+        return jsonify({"success": False, "error": f"Failed to upload sample images: {str(e)}"})
+
 
 @app.route("/download")
 def download():

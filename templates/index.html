@@ -128,7 +128,7 @@
             <div id="steps" class="tab-pane fade show active">
                 <h3>How to Use</h3>
                 <ul>
-                    <li>Select one or more image files.</li>
+                    <li>Select one or more image files (jpg, jpeg, tiff, bmp, png, webp).</li>
                     <li>Process images to extract code and metadata.</li>
                     <li>View results in the table.</li>
                     <li>Download the report.</li>
@@ -138,12 +138,36 @@
             <div id="upload" class="tab-pane fade">
                 <h3 class="text-center">Upload Images</h3>
                 <form id="uploadForm" method="post" enctype="multipart/form-data" class="text-center">
-                    <input type="file" name="images" multiple required hidden id="file-input">
+                    <input type="file" name="images" multiple required hidden id="file-input" accept=".jpg, .jpeg, .tiff, .bmp, .png, .webp">
                     <button type="button" id="uploadButton" class="upload-button">Select Files</button>
                     <p id="fileList"></p>
                     <button type="submit" class="btn btn-primary mt-3" style="display: none;" id="processButton">Upload & Process</button>
                 </form>
                 <p id="processing">Processing...</p>
+
+                <!-- Sample Images Section -->
+                <h4 class="text-center">Sample Images</h4>
+                <div class="d-flex flex-wrap justify-content-center">
+                    </a>
+                    <a href="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/03.jpg?raw=true" target="_blank" style="margin: 5px;">
+                        <img src="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/03.jpg?raw=true" class="thumbnail img-thumbnail">
+                    </a>
+                    <a href="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/04.png=true" target="_blank" style="margin: 5px;">
+                        <img src="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/04.png?raw=true" class="thumbnail img-thumbnail">
+                    </a>
+                      <a href="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/05.png?raw=true" target="_blank" style="margin: 5px;">
+                        <img src="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/05.png?raw=true" class="thumbnail img-thumbnail">
+                    </a>
+                    <a href="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/06.jpg?raw=true" target="_blank" style="margin: 5px;">
+                        <img src="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/06.jpg?raw=true" class="thumbnail img-thumbnail">
+                    </a>
+                    <a href="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/07.jpg?raw=true" target="_blank" style="margin: 5px;">
+                        <img src="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/07.jpg?raw=true" class="thumbnail img-thumbnail">
+                    </a>
+                    <a href="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/08.png?raw=true" target="_blank" style="margin: 5px;">
+                        <img src="https://github.com/kushalgupta1203/OCR-Extractor/blob/main/sample/08.png?raw=true" class="thumbnail img-thumbnail">
+                    </a>
+                </div>
             </div>
 
             <div id="results" class="tab-pane fade">
