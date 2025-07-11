@@ -8,9 +8,17 @@ images/
 uploads/
 "train/"
 train/
+# Environment variables and secrets
 .env
+.env.*
 *.env
-".env"
+.secret
+.secrets
+*.secret
+secrets.json
+config.json
+credentials.json
+.vscode/settings.json
 # Ignore all Excel and CSV files
 *.xls
 *.xlsx
