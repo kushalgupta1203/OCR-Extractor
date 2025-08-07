@@ -8,6 +8,10 @@ images/
 uploads/
 "train/"
 train/
+"summary/"
+summary/
+# AI-generated documentation (excluded from version control)
+project_docs_ai/
 # Environment variables and secrets
 .env
 .env.*
